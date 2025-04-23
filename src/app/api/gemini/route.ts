@@ -4,7 +4,7 @@ import axios from 'axios';
 export async function POST(req: Request) {
   const { question, prompt } = await req.json();
   
-  const apiKey = process.env.GOOGLE_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   const geminiURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
 
   try {

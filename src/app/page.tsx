@@ -1,6 +1,8 @@
-'use client';
+"use client";
+
 import { useState } from "react";
 import axios from "axios";
+import * as XLSX from "xlsx";
 
 export default function Home() {
   const [form, setForm] = useState({
@@ -16,6 +18,9 @@ export default function Home() {
   const [question, setQuestion] = useState("");
   const [sqlQuery, setSqlQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [forecastOutput, setForecastOutput] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleConnect = async () => {
     try {
@@ -41,9 +46,31 @@ export default function Home() {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    setLoading(true);
+
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+    const prompt = `
+      Based on the past data, we need to find out the forecast for next month. 
+      How many number of units will be possibly get sold of each design?
+    `;
+
+    const res = await axios.post("/api/forecast", { prompt, data: jsonData });
+    setForecastOutput(res.data.output);
+    setLoading(false);
+  };
+
   return (
     <main className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Gemini SQL Assistant</h1>
+      <h1 className="text-2xl font-bold mb-4">Gemini SQL + Forecast Assistant</h1>
 
       {!connected && (
         <>
@@ -73,9 +100,6 @@ export default function Home() {
             <>
               <h3 className="mt-4 font-bold">Results:</h3>
               <table className="table-auto border">
-                {/* <thead>
-                  <tr>{columns.map(col => <th key={col}>{col}</th>)}</tr>
-                </thead> */}
                 <tbody>
                   {results.map((row, i) => (
                     <tr key={i}>{row.map((val: any, j: number) => <td key={j}>{val}</td>)}</tr>
@@ -83,6 +107,24 @@ export default function Home() {
                 </tbody>
               </table>
             </>
+          )}
+
+          <hr className="my-6" />
+          <h2 className="text-xl font-semibold">Upload Excel to Forecast</h2>
+          <label className="btn cursor-pointer mt-2">
+            Upload Excel File
+            <input type="file" accept=".xlsx" onChange={handleFileUpload} className="hidden" />
+          </label>
+          {fileName && <p className="mt-2">Uploaded: {fileName}</p>}
+
+          {loading ? (
+            <p className="mt-4">Generating forecast...</p>
+          ) : (
+            forecastOutput && (
+              <div className="mt-4 p-3 border rounded bg-gray-50 whitespace-pre-wrap">
+                {forecastOutput}
+              </div>
+            )
           )}
         </>
       )}

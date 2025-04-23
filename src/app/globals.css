@@ -13,3 +13,8 @@
   padding: 8px 16px;
   border-radius: 6px;
 }
+
+/* Optional: apply font to body (fallback included) */
+body {
+  font-family: var(--font-sans), sans-serif;
+}
