@@ -11,18 +11,24 @@ export async function POST(req: Request) {
   try {
     const { host, user, password, database, question } = await req.json();
 
-    const schema = `
-    TABLE designs_listing(code, product_name, type)
-    TABLE designs_sold(design_code, qty_sold, monthly_avg, multiplier, case_i, case_ii, stock_to_be_maintained)
-    Foreign Key: designs_sold.design_code → designs_listing.code
+    const connection = await mysql.createConnection({ host, user, password, database });
 
-    TABLE students(student_id, name, email, dept_id)
-    TABLE marks(student_id, subject, score)
-    TABLE departments(dept_id, dept_name)
-    Foreign Keys:
-      marks.student_id → students.student_id
-      students.dept_id → departments.dept_id
-    `;
+    // Fetch all tables
+    const [tables]: any = await connection.query("SHOW TABLES");
+    const tableNames = tables.map((table: any) => table[`Tables_in_${database}`]);
+
+    // Fetch columns for each table
+    const columns: { [key: string]: string[] } = {};
+    for (const table of tableNames) {
+      const [cols]: any = await connection.query(`SHOW COLUMNS FROM ${table}`);
+      columns[table] = cols.map((col: any) => col.Field);
+    }
+
+    // Define schema dynamically based on fetched tables and columns
+    const schema = tableNames.map(table => {
+      const tableColumns = columns[table].join(", ");
+      return `TABLE ${table}(${tableColumns})`;
+    }).join("\n");
 
     const fewShotExamples = `
     Example 1: "Which design has the highest monthly average?" →
@@ -37,25 +43,18 @@ export async function POST(req: Request) {
     FROM students s 
     JOIN departments d ON s.dept_id = d.dept_id;
 
-    Example 3: "What are the scores of Alice?" →
-    SELECT m.subject, m.score 
-    FROM students s 
-    JOIN marks m ON s.student_id = m.student_id 
-    WHERE s.name = 'Alice';
+    Example 3: "What is the total cost for 3kg Rice, 1kg Salt, and 3kg Sugar?" →
+    SELECT 
+        SUM(price_per_unit * quantity) AS total_cost
+    FROM (
+        SELECT price_per_unit, 3 AS quantity FROM groceries WHERE name = 'Rice'
+        UNION ALL
+        SELECT price_per_unit, 1 AS quantity FROM groceries WHERE name = 'Salt'
+        UNION ALL
+        SELECT price_per_unit, 3 AS quantity FROM groceries WHERE name = 'Sugar'
+    ) AS subquery;
+`;
 
-    Example 4: "Which subject did Alice score the highest?" →
-    SELECT m.subject 
-    FROM students s 
-    JOIN marks m ON s.student_id = m.student_id 
-    WHERE s.name = 'Alice' 
-    ORDER BY m.score DESC 
-    LIMIT 1;
-
-    Example 5: "How many carving designs are there?" →
-    SELECT COUNT(*) 
-    FROM designs_listing 
-    WHERE type = 'CARVING';
-    `;
 
     const prompt = `
 You are an expert at converting English questions into SQL queries.
@@ -81,7 +80,7 @@ Rules:
         { role: 'system', content: prompt },
         { role: 'user', content: question },
       ],
-      temperature: 0.2,
+      temperature: 0,
     });
 
     const content = chat.choices[0].message.content?.trim() || '';
@@ -96,7 +95,6 @@ Rules:
       );
     }
 
-    const connection = await mysql.createConnection({ host, user, password, database });
     const [rows]: any = await connection.query(sql);
     await connection.end();
 
@@ -110,6 +108,8 @@ Rules:
       sql,
       results: formattedRows,
       reasoning,
+      tables: tableNames,  // Send tables to frontend
+      columns,  // Send columns to frontend
     });
 
   } catch (error) {

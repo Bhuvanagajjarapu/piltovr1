@@ -8,20 +8,21 @@ export default function Home() {
     user: "root",
     password: "",
     database: "",
-    table: "",
   });
 
   const [connected, setConnected] = useState(false);
-  const [columns, setColumns] = useState<string[]>([]);
+  const [tables, setTables] = useState<string[]>([]);
+  const [columns, setColumns] = useState<{ [key: string]: string[] }>({}); // Mapping of table to columns
   const [question, setQuestion] = useState("");
   const [sqlQuery, setSqlQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
-  const [reasoning, setReasoning] = useState(""); // Reasoning state
+  const [reasoning, setReasoning] = useState("");
 
   const handleConnect = async () => {
     try {
       const res = await axios.post("/api/connect", form);
-      setColumns(res.data.columns);
+      setTables(res.data.tables); // Set all tables
+      setColumns(res.data.columns); // Set columns for each table
       setConnected(true);
     } catch (err: any) {
       alert("Connection failed: " + err.message);
@@ -33,11 +34,12 @@ export default function Home() {
       const res = await axios.post("/api/query", {
         ...form,
         question,
+        tables,
         columns,
       });
       setSqlQuery(res.data.sql);
       setResults(res.data.results);
-      setReasoning(res.data.reasoning); 
+      setReasoning(res.data.reasoning);
     } catch (err: any) {
       alert("Query failed: " + err.message);
     }
@@ -77,20 +79,13 @@ export default function Home() {
             onChange={(e) => setForm({ ...form, database: e.target.value })}
             className="input"
           />
-          <input
-            type="text"
-            placeholder="Table"
-            value={form.table}
-            onChange={(e) => setForm({ ...form, table: e.target.value })}
-            className="input"
-          />
           <button onClick={handleConnect} className="btn">Connect</button>
         </>
       )}
 
       {connected && (
         <>
-          <p className="my-2">Connected! Columns: {columns.join(", ")}</p>
+          <p className="my-2">Connected! Tables: {tables.join(", ")}</p>
           <input
             type="text"
             placeholder="Ask your question..."
