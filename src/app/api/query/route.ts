@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       .map((table: string) => `TABLE ${table}(${columns[table].join(", ")})`)
       .join("\n");
 
-    // Few-shot examples (keep your existing examples or adjust)
+    // Few-shot examples
     const fewShotExamples = `
 Example 1: "Which design has the highest monthly average?" →
 SELECT dl.product_name, ds.monthly_avg 
@@ -58,7 +58,7 @@ Rules:
 - Do NOT include or expose passwords or sensitive information.
 `;
 
-    // Initialize OpenAI client with user-provided Groq API key
+    // Initialize OpenAI client
     const openai = new OpenAI({
       apiKey: groqApiKey,
       baseURL: "https://api.groq.com/openai/v1",
@@ -85,14 +85,14 @@ Rules:
       );
     }
 
-    const [rows]: any = await connection.query(sql);
+    const [rows] = await connection.query(sql);
     await connection.end();
 
     if (rows.length === 0) {
       return NextResponse.json({ error: "No results found." }, { status: 404 });
     }
 
-    const formattedRows = rows.map((row: any) => Object.values(row));
+    const formattedRows = rows.map((row: Record<string, any>) => Object.values(row));
 
     return NextResponse.json({
       sql,

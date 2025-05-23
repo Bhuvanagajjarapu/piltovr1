@@ -4,16 +4,17 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const { host, user, password, database } = await req.json();
+
     const connection = await mysql.createConnection({ host, user, password, database });
 
-    const [tables]: any = await connection.query(`SHOW TABLES`);
+    const [tables] = await connection.query<{ [key: string]: string }[]>(`SHOW TABLES`);
     const tableKey = `Tables_in_${database}`;
-    const tableNames = tables.map((t: any) => t[tableKey]);
+    const tableNames = tables.map((t) => t[tableKey]);
 
-    const columns: { [key: string]: string[] } = {};
+    const columns: Record<string, string[]> = {};
     for (const table of tableNames) {
-      const [cols]: any = await connection.query(`SHOW COLUMNS FROM ${table}`);
-      columns[table] = cols.map((col: any) => col.Field);
+      const [cols] = await connection.query<{ Field: string }[]>(`SHOW COLUMNS FROM \`${table}\``);
+      columns[table] = cols.map((col) => col.Field);
     }
 
     await connection.end();

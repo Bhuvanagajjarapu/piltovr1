@@ -2,6 +2,8 @@
 import { useState } from "react";
 import axios from "axios";
 
+type ResultRow = (string | number | null)[];  // row is array of values
+
 export default function Home() {
   const [form, setForm] = useState({
     host: "localhost",
@@ -16,7 +18,7 @@ export default function Home() {
   const [columns, setColumns] = useState<{ [key: string]: string[] }>({});
   const [question, setQuestion] = useState("");
   const [sqlQuery, setSqlQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<ResultRow[]>([]);
   const [reasoning, setReasoning] = useState("");
 
   const handleConnect = async () => {
@@ -130,9 +132,9 @@ export default function Home() {
               <h3 className="mt-4 font-bold">Results:</h3>
               <table className="table-auto border w-full text-sm">
                 <tbody>
-                  {results.map((row, i) => (
+                  {results.map((row: ResultRow, i) => (
                     <tr key={i}>
-                      {row.map((val: any, j: number) => (
+                      {row.map((val, j) => (
                         <td key={j} className="border px-2 py-1">
                           {val}
                         </td>
