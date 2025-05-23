@@ -31,8 +31,12 @@ export default function Home() {
       setTables(res.data.tables);
       setColumns(res.data.columns);
       setConnected(true);
-    } catch (err: any) {
-      alert("Connection failed: " + err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert("Connection failed: " + err.message);
+      } else {
+        alert("Connection failed: Unknown error");
+      }
     }
   };
 
@@ -47,8 +51,12 @@ export default function Home() {
       setSqlQuery(res.data.sql);
       setResults(res.data.results);
       setReasoning(res.data.reasoning);
-    } catch (err: any) {
-      alert("Query failed: " + err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert("Query failed: " + err.message);
+      } else {
+        alert("Query failed: Unknown error");
+      }
     }
   };
 
