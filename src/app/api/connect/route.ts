@@ -10,27 +10,14 @@ export async function POST(req: Request) {
     const tableKey = `Tables_in_${database}`;
     const tableNames = tables.map((t: any) => t[tableKey]);
 
-    let schema = "";
-
+    const columns: { [key: string]: string[] } = {};
     for (const table of tableNames) {
-      const [columns]: any = await connection.query(`SHOW COLUMNS FROM ${table}`);
-      const colNames = columns.map((col: any) => col.Field).join(", ");
-      schema += `TABLE ${table}(${colNames})\n`;
-
-      const [foreignKeys]: any = await connection.query(`
-        SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
-        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_COLUMN_NAME IS NOT NULL
-      `, [database, table]);
-
-      for (const fk of foreignKeys) {
-        schema += `Foreign Key: ${table}.${fk.COLUMN_NAME} → ${fk.REFERENCED_TABLE_NAME}.${fk.REFERENCED_COLUMN_NAME}\n`;
-      }
+      const [cols]: any = await connection.query(`SHOW COLUMNS FROM ${table}`);
+      columns[table] = cols.map((col: any) => col.Field);
     }
 
     await connection.end();
-
-    return NextResponse.json({ tables: tableNames, schema });
+    return NextResponse.json({ tables: tableNames, columns });
   } catch (error) {
     console.error("Connect Error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });

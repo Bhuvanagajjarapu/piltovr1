@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import { useState } from "react";
 import axios from "axios";
 
@@ -8,21 +8,26 @@ export default function Home() {
     user: "root",
     password: "",
     database: "",
+    groqApiKey: "",
   });
 
   const [connected, setConnected] = useState(false);
   const [tables, setTables] = useState<string[]>([]);
-  const [columns, setColumns] = useState<{ [key: string]: string[] }>({}); // Mapping of table to columns
+  const [columns, setColumns] = useState<{ [key: string]: string[] }>({});
   const [question, setQuestion] = useState("");
   const [sqlQuery, setSqlQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [reasoning, setReasoning] = useState("");
 
   const handleConnect = async () => {
+    if (!form.groqApiKey) {
+      alert("Please enter your Groq API Key");
+      return;
+    }
     try {
       const res = await axios.post("/api/connect", form);
-      setTables(res.data.tables); // Set all tables
-      setColumns(res.data.columns); // Set columns for each table
+      setTables(res.data.tables);
+      setColumns(res.data.columns);
       setConnected(true);
     } catch (err: any) {
       alert("Connection failed: " + err.message);
@@ -79,7 +84,16 @@ export default function Home() {
             onChange={(e) => setForm({ ...form, database: e.target.value })}
             className="input"
           />
-          <button onClick={handleConnect} className="btn">Connect</button>
+          <input
+            type="password"
+            placeholder="Groq API Key"
+            value={form.groqApiKey}
+            onChange={(e) => setForm({ ...form, groqApiKey: e.target.value })}
+            className="input"
+          />
+          <button onClick={handleConnect} className="btn">
+            Connect
+          </button>
         </>
       )}
 
@@ -93,7 +107,9 @@ export default function Home() {
             onChange={(e) => setQuestion(e.target.value)}
             className="input"
           />
-          <button onClick={handleAsk} className="btn mt-2">Generate Query</button>
+          <button onClick={handleAsk} className="btn mt-2">
+            Generate Query
+          </button>
 
           {sqlQuery && (
             <>
@@ -117,7 +133,9 @@ export default function Home() {
                   {results.map((row, i) => (
                     <tr key={i}>
                       {row.map((val: any, j: number) => (
-                        <td key={j} className="border px-2 py-1">{val}</td>
+                        <td key={j} className="border px-2 py-1">
+                          {val}
+                        </td>
                       ))}
                     </tr>
                   ))}
