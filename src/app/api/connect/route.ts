@@ -1,4 +1,4 @@
-import mysql from "mysql2/promise";
+import mysql, { RowDataPacket } from "mysql2/promise";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -7,14 +7,14 @@ export async function POST(req: Request) {
 
     const connection = await mysql.createConnection({ host, user, password, database });
 
-    const [tables] = await connection.query<{ [key: string]: string }[]>(`SHOW TABLES`);
+    const [tables] = await connection.query<RowDataPacket[]>(`SHOW TABLES`);
     const tableKey = `Tables_in_${database}`;
-    const tableNames = tables.map((t) => t[tableKey]);
+    const tableNames = tables.map((t) => t[tableKey as keyof typeof t]);
 
     const columns: Record<string, string[]> = {};
     for (const table of tableNames) {
-      const [cols] = await connection.query<{ Field: string }[]>(`SHOW COLUMNS FROM \`${table}\``);
-      columns[table] = cols.map((col) => col.Field);
+      const [cols] = await connection.query<RowDataPacket[]>(`SHOW COLUMNS FROM \`${table}\``);
+      columns[table] = cols.map((col) => (col as { Field: string }).Field);
     }
 
     await connection.end();

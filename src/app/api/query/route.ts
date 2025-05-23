@@ -1,4 +1,4 @@
-import mysql from "mysql2/promise";
+import mysql, { RowDataPacket } from "mysql2/promise";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -14,10 +14,8 @@ type QueryRequestBody = {
   columns: Record<string, string[]>;
 };
 
-// Define a single row result type from MySQL query
-type QueryResultRow = Record<string, string | number | null>;
-
-export async function POST(req: Request) {
+export async function POST(req: Request): Promise<NextResponse> {
+  let connection;
   try {
     const {
       host,
@@ -31,7 +29,7 @@ export async function POST(req: Request) {
     } = (await req.json()) as QueryRequestBody;
 
     // Connect to MySQL dynamically
-    const connection = await mysql.createConnection({
+    connection = await mysql.createConnection({
       host,
       user,
       password,
@@ -40,10 +38,7 @@ export async function POST(req: Request) {
 
     // Prepare schema info for prompt
     const schema = tables
-      .map(
-        (table: string) =>
-          `TABLE ${table}(${columns[table].join(", ")})`
-      )
+      .map((table: string) => `TABLE ${table}(${columns[table].join(", ")})`)
       .join("\n");
 
     // Few-shot examples (unchanged)
@@ -118,14 +113,13 @@ Rules:
     }
 
     // Query result rows typed explicitly
-    const [rows] = await connection.query<QueryResultRow[]>(sql);
-    await connection.end();
+    const [rows] = await connection.query<RowDataPacket[]>(sql);
 
-    if (rows.length === 0) {
+    if (!rows || rows.length === 0) {
       return NextResponse.json({ error: "No results found." }, { status: 404 });
     }
 
-    // Format rows to array of values, no explicit any
+    // Format rows to array of values
     const formattedRows = rows.map((row) => Object.values(row));
 
     return NextResponse.json({
@@ -136,5 +130,7 @@ Rules:
   } catch (error) {
     console.error("Query Error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }
