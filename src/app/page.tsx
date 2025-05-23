@@ -2,7 +2,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-type ResultRow = (string | number | null)[];  // row is array of values
+type ResultRow = (string | number | null)[];
 
 export default function Home() {
   const [form, setForm] = useState({
@@ -132,7 +132,7 @@ export default function Home() {
               <h3 className="mt-4 font-bold">Results:</h3>
               <table className="table-auto border w-full text-sm">
                 <tbody>
-                  {results.map((row: ResultRow, i) => (
+                  {results.map((row, i) => (
                     <tr key={i}>
                       {row.map((val, j) => (
                         <td key={j} className="border px-2 py-1">

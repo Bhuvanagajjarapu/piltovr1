@@ -2,19 +2,51 @@ import mysql from "mysql2/promise";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+// Define request body type
+type QueryRequestBody = {
+  host: string;
+  user: string;
+  password: string;
+  database: string;
+  groqApiKey: string;
+  question: string;
+  tables: string[];
+  columns: Record<string, string[]>;
+};
+
+// Define a single row result type from MySQL query
+type QueryResultRow = Record<string, string | number | null>;
+
 export async function POST(req: Request) {
   try {
-    const { host, user, password, database, groqApiKey, question, tables, columns } = await req.json();
+    const {
+      host,
+      user,
+      password,
+      database,
+      groqApiKey,
+      question,
+      tables,
+      columns,
+    } = (await req.json()) as QueryRequestBody;
 
     // Connect to MySQL dynamically
-    const connection = await mysql.createConnection({ host, user, password, database });
+    const connection = await mysql.createConnection({
+      host,
+      user,
+      password,
+      database,
+    });
 
     // Prepare schema info for prompt
     const schema = tables
-      .map((table: string) => `TABLE ${table}(${columns[table].join(", ")})`)
+      .map(
+        (table: string) =>
+          `TABLE ${table}(${columns[table].join(", ")})`
+      )
       .join("\n");
 
-    // Few-shot examples
+    // Few-shot examples (unchanged)
     const fewShotExamples = `
 Example 1: "Which design has the highest monthly average?" →
 SELECT dl.product_name, ds.monthly_avg 
@@ -85,14 +117,16 @@ Rules:
       );
     }
 
-    const [rows] = await connection.query(sql);
+    // Query result rows typed explicitly
+    const [rows] = await connection.query<QueryResultRow[]>(sql);
     await connection.end();
 
     if (rows.length === 0) {
       return NextResponse.json({ error: "No results found." }, { status: 404 });
     }
 
-    const formattedRows = rows.map((row: Record<string, any>) => Object.values(row));
+    // Format rows to array of values, no explicit any
+    const formattedRows = rows.map((row) => Object.values(row));
 
     return NextResponse.json({
       sql,
